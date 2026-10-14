@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badges %}
+{% block title %}Medicines{% endblock %}
+{% block heading %}Medicines{% endblock %}
+{% block actions %}
+  <a class="btn btn-primary" href="{{ url_for('medicine_new') }}"><i class="bi bi-plus-lg"></i> Add medicine</a>
+{% endblock %}
+{% block content %}
+<form class="card mb-3" method="get" action="{{ url_for('medicines') }}">
+  <div class="card-body row g-2 align-items-end">
+    <div class="col-12 col-md-4">
+      <label class="form-label small" for="q">Search name or code</label>
+      <div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" id="q" name="q" value="{{ f.q }}" placeholder="e.g. Paracetamol or PCM-500"></div>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small" for="category">Category</label>
+      <select class="form-select" id="category" name="category">
+        <option value="">All</option>
+        {% for c in categories %}<option {% if f.category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small" for="location">Location</label>
+      <select class="form-select" id="location" name="location">
+        <option value="">All</option>
+        {% for l in locations %}<option {% if f.location == l %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-1">
+      <label class="form-label small" for="stock">Stock</label>
+      <select class="form-select" id="stock" name="stock">
+        {% for v, l in [('', 'All'), ('low', 'Low'), ('out', 'Out')] %}
+        <option value="{{ v }}" {% if f.stock == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small" for="expiry">Expiry</label>
+      <select class="form-select" id="expiry" name="expiry">
+        {% for v, l in [('', 'All'), ('expired', 'Expired'), ('soon', 'Expiring ≤ ' ~ days ~ ' days'), ('ok', 'In date')] %}
+        <option value="{{ v }}" {% if f.expiry == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select>
+    </div>
+    <input type="hidden" name="days" value="{{ days }}">
+    <div class="col-12 col-md-1 d-flex gap-1">
+      <button class="btn btn-primary w-100" type="submit">Filter</button>
+    </div>
+    {% if f.values()|select|list %}
+    <div class="col-12"><a class="small" href="{{ url_for('medicines') }}">Clear filters</a></div>
+    {% endif %}
+  </div>
+</form>
+
+<div class="card"><div class="card-body p-0">
+  <div class="d-flex align-items-center px-3 pt-3">
+    <span class="text-secondary small">{{ meds|length }} medicine{{ '' if meds|length == 1 else 's' }}</span>
+    <div class="ms-auto small">Sort:
+      {% for v, l in [('name', 'Name'), ('code', 'Code'), ('quantity', 'Quantity'), ('expiry', 'Expiry')] %}
+        <a href="{{ url_for('medicines', sort=v, days=days, **f) }}" class="{% if sort == v %}fw-semibold{% else %}text-secondary{% endif %}">{{ l }}</a>{% if not loop.last %} ·{% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  <div class="table-responsive">
+  <table class="table table-hover align-middle mb-0 mt-2">
+    <thead class="table-light"><tr>
+      <th>Code</th><th>Medicine</th><th class="d-none d-md-table-cell">Category</th>
+      <th class="d-none d-lg-table-cell">Location</th><th class="text-end">Qty</th>
+      <th class="text-end d-none d-md-table-cell">Reorder</th><th>Expiry</th><th>Status</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for m in meds %}
+      <tr>
+        <td class="font-monospace small text-nowrap">{{ m.code }}</td>
+        <td><a class="fw-medium" href="{{ url_for('medicine_detail', medicine_id=m._id|string) }}">{{ m.name }}</a>
+            <div class="small text-secondary">Batch {{ m.batch_number }}</div></td>
+        <td class="d-none d-md-table-cell">{{ m.category }}</td>
+        <td class="d-none d-lg-table-cell">{{ m.storage_location }}</td>
+        <td class="text-end fw-semibold">{{ m.quantity }}</td>
+        <td class="text-end d-none d-md-table-cell text-secondary">{{ m.reorder_level }}</td>
+        <td class="text-nowrap">{{ m.expiry_date|date }}</td>
+        <td>{{ status_badges(m, days) }}</td>
+        <td class="text-end text-nowrap">
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('medicine_edit', medicine_id=m._id|string) }}" title="Edit"><i class="bi bi-pencil"></i><span class="visually-hidden">Edit</span></a>
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('stock', medicine_id=m._id|string) }}" title="Stock in/out"><i class="bi bi-arrow-left-right"></i><span class="visually-hidden">Stock</span></a>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9" class="text-center text-secondary py-5">No medicines match these filters.
+        {% if not f.values()|select|list %}<br>Add one, or run <code>python seed_data.py</code> to load demo data.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div></div>
+{% endblock %}

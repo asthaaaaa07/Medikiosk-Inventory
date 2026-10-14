@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}{{ 'Edit' if editing else 'Add' }} medicine{% endblock %}
+{% block heading %}{{ 'Edit ' ~ med.name if editing else 'Add medicine' }}{% endblock %}
+{% block content %}
+<form method="post" class="card" novalidate>
+  {{ csrf() }}
+  <div class="card-body row g-3">
+    <div class="col-md-6">
+      <label class="form-label" for="name">Medicine name *</label>
+      <input class="form-control" id="name" name="name" value="{{ med.name }}" maxlength="100" required>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="code">Medicine code *</label>
+      {% if editing %}
+        <input class="form-control font-monospace" id="code" value="{{ med.code }}" disabled>
+        <div class="form-text">The code is the unique key and cannot be changed.</div>
+      {% else %}
+        <input class="form-control font-monospace text-uppercase" id="code" name="code" value="{{ med.code }}"
+               maxlength="20" pattern="[A-Za-z0-9\-]{2,20}" required placeholder="e.g. AMX-250">
+        <div class="form-text">2–20 letters, digits or “-”. Must be unique.</div>
+      {% endif %}
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="category">Category *</label>
+      <select class="form-select" id="category" name="category" required>
+        <option value="">Choose…</option>
+        {% for c in categories %}<option {% if med.category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="batch_number">Batch number *</label>
+      <input class="form-control" id="batch_number" name="batch_number" value="{{ med.batch_number }}" maxlength="30" required>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label" for="supplier">Supplier</label>
+      <input class="form-control" id="supplier" name="supplier" value="{{ med.supplier }}" maxlength="100">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="storage_location">Storage location *</label>
+      <select class="form-select" id="storage_location" name="storage_location" required>
+        <option value="">Choose…</option>
+        {% for l in locations %}<option {% if med.storage_location == l %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label" for="quantity">{{ 'Current quantity' if editing else 'Opening quantity *' }}</label>
+      {% if editing %}
+        <input class="form-control" id="quantity" value="{{ med.quantity }}" disabled>
+        <div class="form-text">Change via <a href="{{ url_for('stock', medicine_id=med._id|string) }}">Stock In / Out</a> so it is logged.</div>
+      {% else %}
+        <input class="form-control" type="number" min="0" step="1" id="quantity" name="quantity" value="{{ med.quantity or 0 }}" required>
+      {% endif %}
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label" for="unit_price">Unit price (₹) *</label>
+      <input class="form-control" type="number" min="0" step="0.01" id="unit_price" name="unit_price" value="{{ med.unit_price }}" required>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label" for="reorder_level">Reorder level *</label>
+      <input class="form-control" type="number" min="0" step="1" id="reorder_level" name="reorder_level" value="{{ med.reorder_level }}" required>
+      <div class="form-text">Alert when quantity ≤ this value.</div>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label" for="expiry_date">Expiry date *</label>
+      <input class="form-control" type="date" id="expiry_date" name="expiry_date" value="{{ med.expiry_date }}" required>
+    </div>
+    <div class="col-12">
+      <label class="form-label" for="description">Description</label>
+      <textarea class="form-control" id="description" name="description" rows="2" maxlength="500"
+                placeholder="Strength, form, storage notes (no patient information)">{{ med.description }}</textarea>
+    </div>
+  </div>
+  <div class="card-footer d-flex gap-2">
+    <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> {{ 'Save changes' if editing else 'Add medicine' }}</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('medicine_detail', medicine_id=med._id|string) if editing else url_for('medicines') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

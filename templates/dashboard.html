@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badges, tx_badge %}
+{% block title %}Dashboard{% endblock %}
+{% block heading %}Dashboard{% endblock %}
+{% block actions %}
+  <a class="btn btn-primary" href="{{ url_for('medicine_new') }}"><i class="bi bi-plus-lg"></i> Add medicine</a>
+{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  {% set cards = [
+    ('Total medicines', s.total_medicines, 'bi-capsule', 'primary', url_for('medicines')),
+    ('Total stock units', '{:,}'.format(s.total_units), 'bi-boxes', 'info', url_for('reports')),
+    ('Low stock', s.low_stock_count, 'bi-graph-down-arrow', 'warning', url_for('medicines', stock='low')),
+    ('Expired', s.expired_count, 'bi-x-octagon', 'danger', url_for('medicines', expiry='expired')),
+    ('Expiring in ' ~ days ~ ' days', s.expiring_soon_count, 'bi-hourglass-split', 'orange', url_for('medicines', expiry='soon', days=days)),
+  ] %}
+  {% for label, value, icon, tone, link in cards %}
+  <div class="col-6 col-md-4 col-xl">
+    <a href="{{ link }}" class="stat-card tone-{{ tone }}">
+      <div class="stat-icon"><i class="bi {{ icon }}"></i></div>
+      <div class="stat-value">{{ value }}</div>
+      <div class="stat-label">{{ label }}</div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="card-title h6">Stock movement – last 14 days (units)</h2>
+      <canvas id="movementChart" height="140" aria-label="Units received and issued per day"></canvas>
+    </div></div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="card-title h6">Stock units by storage location</h2>
+      <canvas id="locationChart" height="200" aria-label="Units by storage location"></canvas>
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <div class="d-flex align-items-center mb-2">
+        <h2 class="card-title h6 mb-0">Needs attention</h2>
+        <a class="ms-auto small" href="{{ url_for('alerts', days=days) }}">All alerts →</a>
+      </div>
+      {% set urgent = (s.alerts.expired + s.alerts.low_stock + s.alerts.expiring_soon) %}
+      {% if urgent %}
+      <ul class="list-group list-group-flush">
+        {% for m in urgent[:7] %}
+        <li class="list-group-item d-flex align-items-center px-0">
+          <div><a href="{{ url_for('medicine_detail', medicine_id=m._id|string) }}" class="fw-medium">{{ m.name }}</a>
+            <div class="small text-secondary">{{ m.code }} · {{ m.storage_location }} · Qty {{ m.quantity }}</div></div>
+          <div class="ms-auto text-end">{{ status_badges(m, days) }}</div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="text-secondary mb-0">No alerts. All medicines are above reorder level and in date.</p>{% endif %}
+    </div></div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <div class="d-flex align-items-center mb-2">
+        <h2 class="card-title h6 mb-0">Recent stock movements</h2>
+        <a class="ms-auto small" href="{{ url_for('stock') }}">Stock page →</a>
+      </div>
+      {% if s.recent %}
+      <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+        <thead><tr><th>When</th><th>Medicine</th><th></th><th class="text-end">Qty</th></tr></thead>
+        <tbody>
+        {% for t in s.recent %}
+          <tr><td class="small text-secondary text-nowrap">{{ t.created_at|localtime }}</td>
+              <td>{{ t.medicine_name }}</td><td>{{ tx_badge(t) }}</td><td class="text-end">{{ t.quantity }}</td></tr>
+        {% endfor %}
+        </tbody></table></div>
+      {% else %}<p class="text-secondary mb-0">No stock movements yet.</p>{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+<script>
+  const movement = {{ s.movement|tojson }};
+  const byLocation = {{ s.by_location|tojson }};
+  const labels = movement.labels.map(d => new Date(d + "T00:00").toLocaleDateString(undefined, {day: "numeric", month: "short"}));
+  new Chart(document.getElementById("movementChart"), {
+    type: "bar",
+    data: { labels, datasets: [
+      { label: "Received", data: movement.received, backgroundColor: "#0d9488" },
+      { label: "Issued", data: movement.issued, backgroundColor: "#f59e0b" } ] },
+    options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+  new Chart(document.getElementById("locationChart"), {
+    type: "bar",
+    data: { labels: byLocation.map(r => r._id), datasets: [
+      { label: "Units", data: byLocation.map(r => r.units), backgroundColor: "#2563eb" } ] },
+    options: { indexAxis: "y", responsive: true, plugins: { legend: { display: false } },
+               scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+</script>
+{% endblock %}

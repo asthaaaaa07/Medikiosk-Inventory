@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Database unavailable{% endblock %}
+{% block heading %}Cannot reach MongoDB{% endblock %}
+{% block content %}
+<div class="card border-danger"><div class="card-body">
+  <p class="mb-2">MediKiosk could not connect to its MongoDB database.</p>
+  <pre class="small bg-light p-2 rounded text-wrap">{{ error }}</pre>
+  <ol class="small mb-0">
+    <li>Check that <code>.env</code> exists and <code>MONGODB_URI</code> holds your Atlas connection string (with the right password).</li>
+    <li>In Atlas → <b>Network Access</b>, allow your current IP address.</li>
+    <li>Using local MongoDB? Make sure <code>mongod</code> is running and use <code>mongodb://localhost:27017</code>.</li>
+    <li>Restart the app after changing <code>.env</code>, then open <a href="{{ url_for('health') }}">/health</a> to test.</li>
+  </ol>
+</div></div>
+{% endblock %}

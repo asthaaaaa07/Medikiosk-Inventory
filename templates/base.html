@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}MediKiosk{% endblock %} · MediKiosk</title>
+  <link href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/bootstrap-icons.min.css') }}" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+{% set nav = [
+  ('dashboard', 'Dashboard', 'bi-speedometer2'),
+  ('medicines', 'Medicines', 'bi-capsule'),
+  ('stock', 'Stock In / Out', 'bi-arrow-left-right'),
+  ('alerts', 'Alerts', 'bi-bell'),
+  ('reports', 'Reports', 'bi-file-earmark-bar-graph'),
+] %}
+<div class="d-flex">
+  <nav class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebar" aria-label="Main navigation">
+    <div class="offcanvas-header d-lg-none">
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Close"></button>
+    </div>
+    <div class="brand">
+      <span class="brand-mark"><i class="bi bi-plus-lg"></i></span>
+      <div><div class="brand-name">MediKiosk</div><div class="brand-sub">Medicine Inventory</div></div>
+    </div>
+    <ul class="nav flex-column mt-3">
+      {% for endpoint, label, icon in nav %}
+      <li class="nav-item">
+        <a class="nav-link {% if request.endpoint and request.endpoint.startswith(endpoint.rstrip('s')) %}active{% endif %}"
+           href="{{ url_for(endpoint) }}"><i class="bi {{ icon }}"></i>{{ label }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="sidebar-foot">Student PBL prototype · not for clinical use</div>
+  </nav>
+
+  <main class="content flex-grow-1">
+    <header class="topbar">
+      <button class="btn btn-light d-lg-none me-2" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-label="Open menu">
+        <i class="bi bi-list"></i>
+      </button>
+      <h1 class="h4 mb-0">{% block heading %}{% endblock %}</h1>
+      <div class="ms-auto d-flex gap-2">{% block actions %}{% endblock %}</div>
+    </header>
+
+    <div class="container-fluid px-3 px-md-4 pb-5">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+          {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+</div>
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

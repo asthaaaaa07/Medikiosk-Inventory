@@ -1,0 +1,6 @@
+Flask>=3.0,<4
+pymongo[srv]>=4.6,<5
+python-dotenv>=1.0
+# tests only
+pytest>=8
+mongomock>=4.1

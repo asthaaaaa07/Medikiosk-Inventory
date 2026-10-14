@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badges %}
+{% block title %}Alerts{% endblock %}
+{% block heading %}Inventory alerts{% endblock %}
+{% block content %}
+<form class="d-flex flex-wrap align-items-center gap-2 mb-3" method="get">
+  <label for="days" class="small text-secondary">“Expiring soon” means within</label>
+  <input class="form-control form-control-sm" style="width:5rem" type="number" min="1" max="365" id="days" name="days" value="{{ days }}">
+  <span class="small text-secondary">days</span>
+  <button class="btn btn-sm btn-outline-primary">Apply</button>
+  {% if a.urgent_count %}<span class="badge text-bg-danger ms-auto fs-6"><i class="bi bi-exclamation-triangle"></i> {{ a.urgent_count }} urgent</span>{% endif %}
+</form>
+<p class="small text-secondary">Alerts are rule-based: <b>low stock</b> = quantity ≤ reorder level; <b>expired</b> = expiry date before today; <b>expiring soon</b> = expiry within the chosen number of days. Urgent = expired or out of stock.</p>
+
+{% set sections = [
+  ('Expired — remove from use', a.expired, 'danger', 'bi-x-octagon'),
+  ('Low / out of stock — reorder', a.low_stock, 'warning', 'bi-graph-down-arrow'),
+  ('Expiring within ' ~ days ~ ' days — use first', a.expiring_soon, 'orange', 'bi-hourglass-split'),
+] %}
+{% for title, items, tone, icon in sections %}
+<div class="card mb-3 alert-section tone-{{ tone }}"><div class="card-body">
+  <h2 class="h6"><i class="bi {{ icon }}"></i> {{ title }} <span class="badge text-bg-light">{{ items|length }}</span></h2>
+  {% if items %}
+  <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <thead><tr><th>Code</th><th>Medicine</th><th>Location</th><th class="text-end">Qty</th><th class="text-end">Reorder</th>
+      {% if loop.index == 2 %}<th class="text-end">Suggested order</th>{% endif %}<th>Expiry</th><th>Status</th></tr></thead>
+    <tbody>
+    {% set show_order = loop.index == 2 %}
+    {% for m in items %}
+      {% set st = status(m, days) %}
+      <tr class="{% if st.expired or st.out_of_stock %}table-danger{% endif %}">
+        <td class="font-monospace small text-nowrap">{{ m.code }}</td>
+        <td><a href="{{ url_for('medicine_detail', medicine_id=m._id|string) }}">{{ m.name }}</a></td>
+        <td>{{ m.storage_location }}</td><td class="text-end fw-semibold">{{ m.quantity }}</td>
+        <td class="text-end">{{ m.reorder_level }}</td>
+        {% if show_order %}<td class="text-end">{{ m.suggested_order }}</td>{% endif %}
+        <td class="text-nowrap">{{ m.expiry_date|date }}</td><td>{{ status_badges(m, days) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody></table></div>
+    {% if show_order %}<p class="small text-secondary mt-2 mb-0">Suggested order = 2 × reorder level − current quantity (a simple rule of thumb, not an optimised or clinically validated quantity).</p>{% endif %}
+  {% else %}<p class="text-secondary mb-0">Nothing here.</p>{% endif %}
+</div></div>
+{% endfor %}
+{% endblock %}

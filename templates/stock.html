@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_macros.html" import tx_badge, csrf %}
+{% block title %}Stock In / Out{% endblock %}
+{% block heading %}Stock In / Out{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <form method="post" class="card">
+      {{ csrf() }}
+      <div class="card-body">
+        <h2 class="h6 mb-3">Record a stock movement</h2>
+        <div class="btn-group w-100 mb-3" role="group" aria-label="Movement type">
+          <input type="radio" class="btn-check" name="action" id="act-in" value="receive" checked>
+          <label class="btn btn-outline-success" for="act-in"><i class="bi bi-box-arrow-in-down"></i> Receive</label>
+          <input type="radio" class="btn-check" name="action" id="act-out" value="issue">
+          <label class="btn btn-outline-warning" for="act-out"><i class="bi bi-box-arrow-up"></i> Issue</label>
+        </div>
+        <label class="form-label small" for="medicine_id">Medicine</label>
+        <select class="form-select mb-2" id="medicine_id" name="medicine_id" required>
+          <option value="">Choose…</option>
+          {% for m in meds %}<option value="{{ m._id }}" {% if selected == m._id|string %}selected{% endif %}>{{ m.name }} ({{ m.code }}) — {{ m.quantity }} in stock</option>{% endfor %}
+        </select>
+        <label class="form-label small" for="quantity">Quantity</label>
+        <input class="form-control mb-2" type="number" min="1" step="1" id="quantity" name="quantity" required>
+        <label class="form-label small" for="reason">Reason</label>
+        <select class="form-select mb-2" id="reason" name="reason" required
+                data-in='{{ reasons_in|tojson }}' data-out='{{ reasons_out|tojson }}'>
+          {% for r in reasons_in %}<option>{{ r }}</option>{% endfor %}
+        </select>
+        <input class="form-control mb-3" name="note" maxlength="200" placeholder="Note (optional)">
+        <button class="btn btn-primary w-100" type="submit">Save movement</button>
+        <p class="form-text mb-0 mt-2">Issuing more than the available quantity is rejected, so stock can never go negative.</p>
+      </div>
+    </form>
+  </div>
+  <div class="col-lg-8">
+    <div class="card"><div class="card-body">
+      <div class="d-flex align-items-center mb-2">
+        <h2 class="h6 mb-0">Latest movements</h2>
+        <div class="ms-auto btn-group btn-group-sm">
+          {% for v, l in [('', 'All'), ('RECEIVED', 'Received'), ('ISSUED', 'Issued')] %}
+          <a class="btn btn-outline-secondary {% if tx_type == v %}active{% endif %}" href="{{ url_for('stock', type=v) }}">{{ l }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+        <thead><tr><th>When</th><th>Medicine</th><th>Type</th><th class="text-end">Qty</th><th class="text-end">Balance</th><th>Reason</th></tr></thead>
+        <tbody>
+        {% for t in tx %}
+          <tr><td class="small text-nowrap">{{ t.created_at|localtime }}</td>
+            <td>{{ t.medicine_name }} <span class="small text-secondary font-monospace">{{ t.medicine_code }}</span></td>
+            <td>{{ tx_badge(t) }}</td><td class="text-end">{{ t.quantity }}</td>
+            <td class="text-end small text-nowrap">{{ t.balance_before }} → <b>{{ t.balance_after }}</b></td>
+            <td class="small">{{ t.reason }}{% if t.note %}<div class="text-secondary">{{ t.note }}</div>{% endif %}</td></tr>
+        {% else %}
+          <tr><td colspan="6" class="text-secondary">No movements yet.</td></tr>
+        {% endfor %}
+        </tbody></table></div>
+      <div class="small mt-2"><a href="{{ url_for('reports', kind='movements') }}">Full movement report →</a></div>
+    </div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  // Swap the reason list when switching between Receive and Issue.
+  const reason = document.getElementById("reason");
+  document.querySelectorAll("input[name=action]").forEach(radio => radio.addEventListener("change", () => {
+    const list = JSON.parse(radio.value === "receive" ? reason.dataset.in : reason.dataset.out);
+    reason.replaceChildren(...list.map(r => new Option(r, r)));
+  }));
+</script>
+{% endblock %}

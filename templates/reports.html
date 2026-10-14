@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block heading %}Reports{% endblock %}
+{% block actions %}
+  <a class="btn btn-outline-primary" href="{{ url_for('report_csv', kind=kind, days=days, period=period, type=tx_type) }}">
+    <i class="bi bi-download"></i> Export CSV</a>
+{% endblock %}
+{% block content %}
+<ul class="nav nav-tabs mb-3">
+  {% for k, label in reports.items() %}
+  <li class="nav-item"><a class="nav-link {% if k == kind %}active{% endif %}" href="{{ url_for('reports', kind=k) }}">{{ label }}</a></li>
+  {% endfor %}
+</ul>
+{% if kind in ('expiry', 'movements') %}
+<form class="d-flex flex-wrap align-items-center gap-2 mb-3" method="get">
+  <input type="hidden" name="kind" value="{{ kind }}">
+  {% if kind == 'expiry' %}
+    <label class="small" for="days">Expired + expiring within</label>
+    <input class="form-control form-control-sm" style="width:5rem" type="number" min="1" max="365" id="days" name="days" value="{{ days }}"> <span class="small">days</span>
+  {% else %}
+    <label class="small" for="period">Last</label>
+    <input class="form-control form-control-sm" style="width:5rem" type="number" min="0" max="3650" id="period" name="period" value="{{ period }}">
+    <span class="small">days (0 = all)</span>
+    <select class="form-select form-select-sm" style="width:auto" name="type" aria-label="Movement type">
+      {% for v, l in [('', 'All types'), ('RECEIVED', 'Received'), ('ISSUED', 'Issued')] %}
+      <option value="{{ v }}" {% if tx_type == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+  {% endif %}
+  <button class="btn btn-sm btn-outline-primary">Apply</button>
+</form>
+{% endif %}
+<div class="card"><div class="card-body p-0">
+  <div class="px-3 pt-3 small text-secondary">{{ rows|length }} row{{ '' if rows|length == 1 else 's' }}{% if kind == 'summary' and rows %} · total stock value {{ rows|sum(attribute=8)|inr }}{% endif %}</div>
+  <div class="table-responsive"><table class="table table-sm table-striped align-middle mb-0 mt-2">
+    <thead class="table-light"><tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for row in rows %}<tr>{% for c in row %}<td>{{ c }}</td>{% endfor %}</tr>
+    {% else %}<tr><td colspan="{{ headers|length }}" class="text-secondary text-center py-4">No rows for this report.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div></div>
+{% endblock %}

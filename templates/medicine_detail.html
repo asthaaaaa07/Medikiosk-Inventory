@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badges, tx_badge, csrf %}
+{% block title %}{{ med.name }}{% endblock %}
+{% block heading %}{{ med.name }}{% endblock %}
+{% block actions %}
+  <a class="btn btn-outline-secondary" href="{{ url_for('medicine_edit', medicine_id=med._id|string) }}"><i class="bi bi-pencil"></i> Edit</a>
+  <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal"><i class="bi bi-trash"></i> Delete</button>
+{% endblock %}
+{% block content %}
+{% set this_page = url_for('medicine_detail', medicine_id=med._id|string) %}
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card mb-3"><div class="card-body">
+      <div class="d-flex align-items-start mb-3">
+        <div><div class="font-monospace text-secondary">{{ med.code }}</div>
+          <div class="display-6 fw-semibold">{{ med.quantity }} <span class="fs-6 text-secondary">units in stock</span></div></div>
+        <div class="ms-auto text-end">{{ status_badges(med) }}</div>
+      </div>
+      <dl class="row mb-0 small detail-list">
+        <dt class="col-5">Category</dt><dd class="col-7">{{ med.category }}</dd>
+        <dt class="col-5">Batch number</dt><dd class="col-7">{{ med.batch_number }}</dd>
+        <dt class="col-5">Supplier</dt><dd class="col-7">{{ med.supplier or '—' }}</dd>
+        <dt class="col-5">Storage location</dt><dd class="col-7">{{ med.storage_location }}</dd>
+        <dt class="col-5">Unit price</dt><dd class="col-7">{{ med.unit_price|inr }}</dd>
+        <dt class="col-5">Stock value</dt><dd class="col-7">{{ (med.quantity * med.unit_price)|inr }}</dd>
+        <dt class="col-5">Reorder level</dt><dd class="col-7">{{ med.reorder_level }}</dd>
+        <dt class="col-5">Expiry date</dt><dd class="col-7">{{ med.expiry_date|date }}</dd>
+        <dt class="col-5">Description</dt><dd class="col-7">{{ med.description or '—' }}</dd>
+        <dt class="col-5">Last updated</dt><dd class="col-7">{{ med.updated_at|localtime }}</dd>
+      </dl>
+    </div></div>
+
+    <div class="card"><div class="card-body">
+      <ul class="nav nav-pills nav-fill mb-3" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#recv" type="button">Receive stock</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#issue" type="button">Issue stock</button></li>
+      </ul>
+      <div class="tab-content">
+        {% for pane, action, reasons, label, btn in [('recv', 'receive', reasons_in, 'Received', 'success'), ('issue', 'issue', reasons_out, 'Issued', 'warning')] %}
+        <form method="post" action="{{ url_for('stock') }}" class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ pane }}">
+          {{ csrf() }}
+          <input type="hidden" name="medicine_id" value="{{ med._id }}">
+          <input type="hidden" name="action" value="{{ action }}">
+          <input type="hidden" name="next" value="{{ this_page }}">
+          <div class="row g-2">
+            <div class="col-4"><label class="form-label small" for="qty-{{ pane }}">Quantity</label>
+              <input class="form-control" type="number" min="1" step="1" id="qty-{{ pane }}" name="quantity" required
+                     {% if action == 'issue' %}max="{{ med.quantity }}"{% endif %}></div>
+            <div class="col-8"><label class="form-label small" for="reason-{{ pane }}">Reason</label>
+              <select class="form-select" id="reason-{{ pane }}" name="reason" required>
+                {% for r in reasons %}<option>{{ r }}</option>{% endfor %}</select></div>
+            <div class="col-12"><input class="form-control" name="note" maxlength="200" placeholder="Note (optional, e.g. invoice no. / ward)"></div>
+            <div class="col-12"><button class="btn btn-{{ btn }} w-100" type="submit">Record {{ label|lower }} stock</button></div>
+          </div>
+        </form>
+        {% endfor %}
+      </div>
+    </div></div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card"><div class="card-body">
+      <h2 class="h6">Stock history</h2>
+      <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+        <thead><tr><th>When</th><th>Type</th><th class="text-end">Qty</th><th class="text-end">Balance</th><th>Reason</th></tr></thead>
+        <tbody>
+        {% for t in history %}
+          <tr><td class="small text-nowrap">{{ t.created_at|localtime }}</td><td>{{ tx_badge(t) }}</td>
+            <td class="text-end">{{ t.quantity }}</td>
+            <td class="text-end text-nowrap small">{{ t.balance_before }} → <b>{{ t.balance_after }}</b></td>
+            <td class="small">{{ t.reason }}{% if t.note %}<div class="text-secondary">{{ t.note }}</div>{% endif %}</td></tr>
+        {% else %}
+          <tr><td colspan="5" class="text-secondary">No movements recorded yet.</td></tr>
+        {% endfor %}
+        </tbody></table></div>
+    </div></div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteTitle" aria-hidden="true">
+  <div class="modal-dialog"><form class="modal-content" method="post" action="{{ url_for('medicine_delete', medicine_id=med._id|string) }}">
+    {{ csrf() }}
+    <div class="modal-header"><h2 class="modal-title h5" id="deleteTitle">Delete {{ med.name }}?</h2>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body">
+      <p>This removes the medicine from inventory. Its stock history is kept for audit.</p>
+      <label class="form-label" for="confirm_code">Type the code <b class="font-monospace">{{ med.code }}</b> to confirm</label>
+      <input class="form-control font-monospace" id="confirm_code" name="confirm_code" autocomplete="off" required>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="submit" class="btn btn-danger">Delete permanently</button>
+    </div>
+  </form></div>
+</div>
+{% endblock %}

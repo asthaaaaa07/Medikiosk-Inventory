@@ -1,0 +1,20 @@
+{% macro status_badges(med, days=None) -%}
+  {% set st = status(med, days) %}
+  {% if st.expired %}<span class="badge text-bg-danger">Expired</span>
+  {% elif st.expiring_soon %}<span class="badge text-bg-warning">Expires in {{ st.days_to_expiry }}d</span>{% endif %}
+  {% if st.out_of_stock %}<span class="badge text-bg-danger">Out of stock</span>
+  {% elif st.low_stock %}<span class="badge text-bg-warning">Low stock</span>{% endif %}
+  {% if not (st.expired or st.expiring_soon or st.low_stock or st.out_of_stock) %}<span class="badge text-bg-success">OK</span>{% endif %}
+{%- endmacro %}
+
+{% macro tx_badge(t) -%}
+  {% if t.type == 'RECEIVED' %}
+    <span class="badge badge-in"><i class="bi bi-box-arrow-in-down"></i> In</span>
+  {% else %}
+    <span class="badge badge-out"><i class="bi bi-box-arrow-up"></i> Out</span>
+  {% endif %}
+{%- endmacro %}
+
+{% macro csrf() -%}
+  <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token', '') }}">
+{%- endmacro %}
